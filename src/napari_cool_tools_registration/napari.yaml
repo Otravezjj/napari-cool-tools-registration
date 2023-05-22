@@ -1,0 +1,4 @@
+name: napari-cool-tools-registration
+display_name: COOL Lab Registration Tools
+contributions:
+  commands:
