@@ -2,3 +2,10 @@ name: napari-cool-tools-registration
 display_name: COOL Lab Registration Tools
 contributions:
   commands:
+    - id: napari-cool-tools-registration.a_scan_correction
+      title: Correct A-scan distortion of Volume
+      python_name: napari_cool_tools_registration._registration_tools:a_scan_correction
+  widgets:
+    - command: napari-cool-tools-registration.a_scan_correction
+      display_name: Correct A-scan distortion
+      autogenerate: true
