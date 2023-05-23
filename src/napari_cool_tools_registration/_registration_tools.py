@@ -8,6 +8,7 @@ from napari.layers import Image, Layer
 from napari.qt.threading import thread_worker
 from napari_cool_tools_img_proc import torch, viewer, device
 from napari_cool_tools_img_proc._normalization import normalize_data_in_range_pt_func
+from napari_cool_tools_segmentation._segmentation import memory_stats
 
 def a_scan_correction(vol:Image):
     """"""
@@ -20,6 +21,8 @@ def a_scan_correction_thread(vol:Image) -> Layer:
     ''''''
     show_info(f'A-scan correction thread has started')
     layer = a_scan_correction_func(vol=vol)
+    torch.cuda.empty_cache()
+    memory_stats()
     show_info(f'A-scan correction thread has completed')
 
     return layer
