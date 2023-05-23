@@ -6,7 +6,7 @@ from tqdm import tqdm
 from napari.utils.notifications import show_info
 from napari.layers import Image, Layer
 from napari.qt.threading import thread_worker
-from napari_cool_tools_img_proc import torch, viewer, device
+from napari_cool_tools_io import torch, viewer
 from napari_cool_tools_img_proc._normalization import normalize_data_in_range_pt_func
 from napari_cool_tools_segmentation._segmentation import memory_stats
 
@@ -42,7 +42,7 @@ def a_scan_correction_func(vol:Image) -> Layer:
 
     vol_out = np.empty_like(data)
 
-    for i in tqdm(range(h),desc="Complete"):
+    for i in tqdm(range(h),desc="A-scan Correction"):
         for j in range(d):
             vol_out[i,j,:] = np.interp(Xn,x_org,data[i,j,:])
 
