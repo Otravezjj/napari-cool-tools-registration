@@ -5,7 +5,19 @@ contributions:
     - id: napari-cool-tools-registration.a_scan_correction
       title: Correct A-scan distortion of Volume
       python_name: napari_cool_tools_registration._registration_tools:a_scan_correction
+    - id: napari-cool-tools-registration.a_scan_reg_calc_settings
+      title: Calculate A-scan registration settings
+      python_name: napari_cool_tools_registration._registration_tools:a_scan_reg_calc_settings
+    - id: napari-cool-tools-registration.a_scan_reg_subpix
+      title: Register A-scans of OCT volume (subpixel)
+      python_name: napari_cool_tools_registration._registration_tools:a_scan_reg_subpix
   widgets:
     - command: napari-cool-tools-registration.a_scan_correction
       display_name: Correct A-scan distortion
+      autogenerate: true
+    - command: napari-cool-tools-registration.a_scan_reg_calc_settings
+      display_name: Calculate A-scan registration settings
+      autogenerate: true
+    - command: napari-cool-tools-registration.a_scan_reg_subpix
+      display_name: Register A-scans of OCT volume (subpixel)
       autogenerate: true
