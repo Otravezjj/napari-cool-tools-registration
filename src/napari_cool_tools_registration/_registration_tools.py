@@ -32,8 +32,8 @@ def a_scan_correction_func(vol:Image) -> Layer:
     """"""
     data = vol.data
     data = normalize_data_in_range_pt_func(data, 0.0, 1.0)
-    name = vol.name
-    vol.name = f"{vol.name}_pre_ascan_correction"
+    name = f"{vol.name}_AS_Corr"
+    #vol.name = f"{vol.name}_pre_ascan_correction"
     h = data.shape[0]
     d = data.shape[1]
     w = data.shape[2]
@@ -53,7 +53,7 @@ def a_scan_correction_func(vol:Image) -> Layer:
     layer_type = "image"
     layer = Layer.create(vol_out,add_kwargs,layer_type)
 
-    print(f"data min,max: ({data.min()},{data.max()}), vs vol_out min,max: ({vol_out.min()},{vol_out.max()})\n")
+    #print(f"data min,max: ({data.min()},{data.max()}), vs vol_out min,max: ({vol_out.min()},{vol_out.max()})\n")
 
     return layer
 
