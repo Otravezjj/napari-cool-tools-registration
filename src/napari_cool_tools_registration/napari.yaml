@@ -11,6 +11,9 @@ contributions:
     - id: napari-cool-tools-registration.a_scan_reg_subpix
       title: Register A-scans of OCT volume (subpixel)
       python_name: napari_cool_tools_registration._registration_tools:a_scan_reg_subpix
+    - id: napari-cool-tools-registration.optical_flow_reg
+      title: Optical Flow Registration
+      python_name: napari_cool_tools_registration._registration_tools:optical_flow_registration
   widgets:
     - command: napari-cool-tools-registration.a_scan_correction
       display_name: Correct A-scan distortion
@@ -20,4 +23,7 @@ contributions:
       autogenerate: true
     - command: napari-cool-tools-registration.a_scan_reg_subpix
       display_name: Register A-scans of OCT volume (subpixel)
+      autogenerate: true
+    - command: napari-cool-tools-registration.optical_flow_reg
+      display_name: Optical Flow Registration
       autogenerate: true

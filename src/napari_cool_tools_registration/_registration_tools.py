@@ -6,6 +6,7 @@ from typing import Dict,List
 from tqdm import tqdm
 from napari.utils.notifications import show_info
 from napari.layers import Image, Layer
+from napari.types import ImageData
 from napari.qt.threading import thread_worker
 from napari_cool_tools_io import torch, viewer
 from napari_cool_tools_img_proc._normalization import normalize_data_in_range_pt_func
@@ -606,3 +607,137 @@ def a_scan_reg_subpix_gen(vol:Image, settings:Dict, sub_pixel_threshold:float=0.
     show_info(f'A-scan registration thread has completed')
 
     yield layer
+
+
+def optical_flow_registration(img_seq:Image, slices_to_register:str, target_idx_from_list:int, mode:str='ilk'):
+    """Register sequence of images using optical flow estimation via either Iterative Lucas-Kanade sover 'ilk' or TV-L1 solver 'tvl1'.
+
+    Args:
+        img_seq (Image): Stack of 2D image data to be registered
+        slices_to_register (str): comma separated list of index values of the array slices to be included in the registration process
+                                  By default (if no str is provided) all images from index 0 are included
+        target_idx_from_list (int): indicates which index from the slices_to_register string will be the target against which all other
+                                    slices will be registered.  By default index 0 is used so the first index in the slices_to_register list
+                                    will be the target of registration unless another index is chosen.  This paramater refers to the slices_to_register
+                                    list and not all of the indicies included in the image sequence
+
+                                    If slices_to_register = "5,4,3,9,1,0" and target_idx_from_list = 3 then images at indicies 5,4,3,1,0 will be registerd
+                                    to the image at index 9
+
+    Returns:
+        Layer containing the averaged image of the images at indicies selected in slices_to_register registered to the image at the index indicated by target_idx_from_list
+    """
+
+    try:
+        assert mode == 'ilk' or mode == 'tvl1', "Mode must be 'ilk' or 'tvl1' all other inputs are invalid"
+    except AssertionError as e:
+        raise Exception("An error Occured:", str(e))
+    else:
+        show_info(f"Mode: {mode} is valid\n")
+        optical_flow_registration_thread(img_seq,slices_to_register,target_idx_from_list)
+
+    return
+
+
+@thread_worker(connect={"returned": viewer.add_layer},progress=True)
+def optical_flow_registration_thread(img_seq:Image, slices_to_register:str, target_idx_from_list:int, mode:str='ilk') -> Layer:
+    """Register sequence of images using optical flow estimation via either Iterative Lucas-Kanade sover 'ilk' or TV-L1 solver 'tvl1'.
+
+    Args:
+        img_seq (Image): Stack of 2D image data to be registered
+        slices_to_register (str): comma separated list of index values of the array slices to be included in the registration process
+                                  By default (if no str is provided) all images from index 0 are included
+        target_idx_from_list (int): indicates which index from the slices_to_register string will be the target against which all other
+                                    slices will be registered.  By default index 0 is used so the first index in the slices_to_register list
+                                    will be the target of registration unless another index is chosen.  This paramater refers to the slices_to_register
+                                    list and not all of the indicies included in the image sequence
+
+                                    If slices_to_register = "5,4,3,9,1,0" and target_idx_from_list = 3 then images at indicies 5,4,3,1,0 will be registerd
+                                    to the image at index 9
+
+    Returns:
+        Layer containing the averaged image of the images at indicies selected in slices_to_register registered to the image at the index indicated by target_idx_from_list
+    """
+
+    show_info(f'optical_flow_registration thread has started')
+
+    name = img_seq.name
+
+    # optional kwargs for viewer.add_* method
+    add_kwargs = {"name": f"{name}_OFR"}
+
+    # optional layer type argument
+    layer_type = "image"
+
+    img_seq = img_seq.data
+
+    target_slice = target_idx_from_list
+    
+    if slices_to_register == '':
+        a_slices = np.arange(img_seq.shape[0])
+    else:
+        # check that values in old_vals are integers
+        slice_list = slices_to_register.split(',')
+
+        try:
+            possible_nums = [int(x.strip()) for x in slice_list]
+            valid_nums = all([isinstance(item, int) for item in possible_nums])
+            assert valid_nums, f'old_vals input is invalid!! old_vals accepts comma separated list of integer values only.'
+        except ValueError as e:
+            raise Exception("An error Occured:", str(e))
+        else:
+            a_slices = np.array([int(x.strip()) for x in slice_list])
+
+    # move target slice to index 0
+    temp = a_slices[target_slice].copy()
+    a_slices = np.delete(a_slices,target_slice,axis=0)
+    a_slices = np.insert(a_slices,0,temp,axis=0)
+
+    # get active portion of image sequence
+    print(f'a_slices: {a_slices}')
+    active = img_seq[(a_slices)].copy()
+
+    registered = np.empty_like(active)
+    registered[0] = active[target_slice].copy()
+
+
+    for i,s in enumerate(active[1:]):
+
+        # compute optical flow
+        flow_warp = opti_flow_internal(active[0],s,mode=mode)
+
+        # collect registered images
+        registered[i] = flow_warp
+
+        print(f'Index: {i+1} of {active[1:].shape[0]} registered.')
+
+    reg_out = registered.mean(axis=0)
+
+    layer = Layer.create(reg_out,add_kwargs,layer_type)
+
+    show_info(f'optical_flow_registration thread has completed')
+
+    return layer
+
+
+def opti_flow_internal(img:ImageData,img2:ImageData,mode:str = 'ilk'):
+    ''''''
+
+    from skimage.registration import optical_flow_tvl1, optical_flow_ilk
+    from skimage.transform import warp
+
+    r_shape = img.shape
+
+    # compute optical flow
+    if mode == 'ilk':
+        v,u = optical_flow_ilk(img,img2)
+    else:
+        v,u = optical_flow_tvl1(img,img2)
+
+    # register
+    row, col = r_shape
+    row_coords, col_coords = np.meshgrid(np.arange(row),np.arange(col), indexing='ij')
+
+    flow_warp = warp(img2,np.array([row_coords + v,col_coords + u]),mode='edge')
+
+    return flow_warp
