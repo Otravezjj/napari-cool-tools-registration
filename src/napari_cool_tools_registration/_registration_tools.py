@@ -9,7 +9,7 @@ from napari.layers import Image, Layer
 from napari.types import ImageData
 from napari.qt.threading import thread_worker
 from napari_cool_tools_io import torch, viewer
-from napari_cool_tools_img_proc._normalization import normalize_data_in_range_pt_func
+from napari_cool_tools_img_proc._normalization import normalize_data_in_range_func, normalize_data_in_range_pt_func
 from napari_cool_tools_segmentation._segmentation import memory_stats
 
 def a_scan_correction(vol:Image):
@@ -32,7 +32,8 @@ def a_scan_correction_thread(vol:Image) -> Layer:
 def a_scan_correction_func(vol:Image) -> Layer:
     """"""
     data = vol.data
-    data = normalize_data_in_range_pt_func(data, 0.0, 1.0)
+    #data = normalize_data_in_range_pt_func(data, 0.0, 1.0)
+    data = normalize_data_in_range_func(data, 0.0, 1.0)
     name = f"{vol.name}_AS_Corr"
     #vol.name = f"{vol.name}_pre_ascan_correction"
     h = data.shape[0]
@@ -48,7 +49,8 @@ def a_scan_correction_func(vol:Image) -> Layer:
         for j in range(d):
             vol_out[i,j,:] = np.interp(Xn,x_org,data[i,j,:])
 
-    vol_out = normalize_data_in_range_pt_func(vol_out, 0.0, 1.0)
+    #vol_out = normalize_data_in_range_pt_func(vol_out, 0.0, 1.0)
+    vol_out = normalize_data_in_range_func(vol_out, 0.0, 1.0)
 
     add_kwargs = {"name":name}
     layer_type = "image"
@@ -543,7 +545,7 @@ def a_scan_reg_subpix_gen(vol:Image, settings:Dict, sub_pixel_threshold:float=0.
         gap_start_idxs = np.unique(gap_starts[2])
         gap_end_idxs = np.unique(gap_ends[2])
 
-        print(f"\ngap starts: {gap_start_idxs}\ngap ends: {gap_end_idxs}\n")
+        print(f"\ngap start indicies: {gap_start_idxs}\ngap end indicies: {gap_end_idxs}\n")
 
 
         if len(gap_start_idxs) < len(gap_end_idxs):
