@@ -14,7 +14,15 @@ contributions:
     - id: napari-cool-tools-registration.optical_flow_reg
       title: Optical Flow Registration
       python_name: napari_cool_tools_registration._registration_tools:optical_flow_registration
+    - id: napari-cool-tools-registration.curve_correction
+      title: BScan Curve Correction
+      python_name: napari_cool_tools_registration._curve_correction:Curve_Correction_Widget
+    - id: napari-cool-tools-registration.m_scan_registration
+      title: MScan registration
+      python_name: napari_cool_tools_registration._registration_tools:m_scan_registration
   widgets:
+    - command: napari-cool-tools-registration.curve_correction
+      display_name: BScan Curve Correction
     - command: napari-cool-tools-registration.a_scan_correction
       display_name: Correct A-scan distortion
       autogenerate: true
@@ -26,4 +34,7 @@ contributions:
       autogenerate: true
     - command: napari-cool-tools-registration.optical_flow_reg
       display_name: Optical Flow Registration
+      autogenerate: true
+    - command: napari-cool-tools-registration.m_scan_registration
+      display_name: MScan registration
       autogenerate: true

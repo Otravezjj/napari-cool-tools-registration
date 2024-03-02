@@ -4,7 +4,7 @@ This module contains code for registering volumetric and image data.
 import numpy as np
 from typing import Dict,List
 from tqdm import tqdm
-from napari.utils.notifications import show_info
+from napari.utils.notifications import show_info, show_error
 from napari.layers import Image, Layer
 from napari.types import ImageData
 from napari.qt.threading import thread_worker
@@ -665,9 +665,6 @@ def optical_flow_registration_thread(img_seq:Image, slices_to_register:str, targ
 
     name = img_seq.name
 
-    # optional kwargs for viewer.add_* method
-    add_kwargs = {"name": f"{name}_OFR"}
-
     # optional layer type argument
     layer_type = "image"
 
@@ -715,6 +712,9 @@ def optical_flow_registration_thread(img_seq:Image, slices_to_register:str, targ
 
     reg_out = registered.mean(axis=0)
 
+    # optional kwargs for viewer.add_* method
+    add_kwargs = {"name": f"{name}_idx_{a_slices[0]}_OFR"}
+
     layer = Layer.create(reg_out,add_kwargs,layer_type)
 
     show_info(f'optical_flow_registration thread has completed')
@@ -743,3 +743,102 @@ def opti_flow_internal(img:ImageData,img2:ImageData,mode:str = 'ilk'):
     flow_warp = warp(img2,np.array([row_coords + v,col_coords + u]),mode='edge')
 
     return flow_warp
+
+def m_scan_registration(vol:Image,m_scans:int=3,m_idx:int=1,subpixel:bool=True,debug:bool=False):
+    """"""
+    data = vol.data
+    name = f"{vol.name}"
+
+    # case 4D OCTA data
+    if data.ndim == 4:
+        show_info(f"Not yet implemented {data.ndim}-dimensional data.")
+        pass
+    # case continuous OCTA data
+    elif data.ndim == 3:
+        shifts = []
+        for b_idx in range(int(data.shape[0]/m_scans)):
+        #for b_idx in tqdm(range(int(data.shape[0]/m_scans)),desc="Registering m-scans"):
+            curr_idx = b_idx*m_scans
+            target_idx = curr_idx + m_idx
+
+            m_idx_set = set(range(m_scans))
+            reg_idxs = np.array(list(m_idx_set - {m_idx}))+curr_idx
+
+            if debug:
+                #print(f"current idx: {curr_idx}\ntarget idx: {target_idx}\n")
+                #print(f"m_idx_set: {m_idx_set}\nreg_idxs: {reg_idxs}\n")
+                pass
+            else:
+                pass
+
+            #if curr_idx == 1200:
+            for i in reg_idxs:
+                if debug:
+                    show_info(f"Registering m-scan{i} to m-scan{target_idx}\n")
+                else:
+                    pass
+                target_frame = data[curr_idx,:,:]
+                reg_frame = data[i,:,:]
+                registered = register_frame_2d(target_frame,reg_frame,shifts,subpixel=subpixel,debug=debug)
+                data[i,:,:] = registered[:,:]
+                
+        shift_data = np.stack(shifts)
+        avg_shift = shift_data.mean(0)
+        #v_shifts = len(shift_data[:,0,:].nonzero())
+        #h_shifts = len(shift_data[:,1,].nonzero())
+
+        show_info(f"Avg shift: {avg_shift}\n")
+
+    # case < 3D data or > 4D data
+    elif data.ndim < 3 or data.ndim > 4:
+        show_error(f"Invalid {data.ndim}-dimensional data.")
+
+def register_frame_2d(target_frame:ImageData,
+                   registering_frame:ImageData,
+                   shifts,
+                   subpixel:bool=True,
+                   debug:bool=False):
+    """"""
+    from skimage.registration import phase_cross_correlation
+    from scipy.ndimage import fourier_shift
+
+    shift, error, diffphase = phase_cross_correlation(
+        target_frame, registering_frame, upsample_factor=100
+    )
+
+    shifts.append(shift)
+
+    if subpixel:
+
+        if debug:
+            show_info(f"shift: {shift}\n")
+        else:
+            pass
+
+        input_ = np.fft.fft2(registering_frame)
+        result = fourier_shift(input_,(shift[0],shift[1]),axis=-1)
+        result = np.fft.ifft2(result)
+        reg_shift = result.real
+
+        #viewer.add_image(reg_shift)
+
+    else:
+        shift_h = round(shift[1])
+        shift_w = round(shift[0])
+        shift_h_idx = abs(shift_h)
+        shift_w_idx = abs(shift_w)
+
+        if debug:
+            print(f"shift: {shift}\nshift_w: {shift_w}\nshift_h: {shift_h}\n")
+        else:
+            pass
+
+        if shift_h > 0:
+            reg_shift = np.roll(registering_frame, shift_w, axis=0)
+            reg_shift = np.roll(registering_frame, shift_h, axis=1)
+            reg_shift[-shift_w_idx:, :] = 0
+            reg_shift[:, -shift_h_idx:] = 0
+        else:
+            reg_shift = registering_frame
+
+    return reg_shift
